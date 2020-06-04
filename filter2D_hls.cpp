@@ -21,6 +21,7 @@ void filter2D_hls(wide_stream* in_stream, wide_stream* out_stream, int rows, int
 #pragma HLS INTERFACE ap_stable port=r2
 #pragma HLS INTERFACE ap_stable port=r3
 
+//for  pipeline
 #pragma HLS dataflow
 
 	GRAY_IMAGE g_img_0(rows,cols);
@@ -29,9 +30,9 @@ void filter2D_hls(wide_stream* in_stream, wide_stream* out_stream, int rows, int
 	const int col_packets = cols*channels/4;
 	const int packets = col_packets*rows;
 	const int pixel_cnt = rows*cols;
-
+//transfer image to gray image
 	for(int r = 0; r < packets; r++){
-#pragma HLS pipeline II=4
+#pragma HLS pipeline II=4 // initial intervel = 4
 		ap_uint<32> dat = in_stream->data;
 		g_img_0.write(GRAY_PIXEL(dat.range(7,0)));
 		g_img_0.write(GRAY_PIXEL(dat.range(15,8)));
@@ -42,7 +43,7 @@ void filter2D_hls(wide_stream* in_stream, wide_stream* out_stream, int rows, int
 
 	const int kernel_size = 3;
 	hls::Window<kernel_size,kernel_size,ap_int<8> >	kernel;
-
+	// the weight of kernel is based on the AXI Lite interface input
 	kernel.val[0][0] = r1.range(7,0);
 	kernel.val[0][1] = r1.range(15,8);
 	kernel.val[0][2] = r1.range(23,16);
@@ -56,9 +57,10 @@ void filter2D_hls(wide_stream* in_stream, wide_stream* out_stream, int rows, int
 	hls::Point_<int> c_point;
 	c_point.x=-1;
 	c_point.y=-1;
+	//calculate by hls-defined function
 	hls::Filter2D<hls::BORDER_DEFAULT>(g_img_0,g_img_1,kernel, c_point);
-
-
+	
+	
 	for(int r = 0; r < rows; r++){
 #pragma HLS pipeline II=4
 		for(int c = 0; c < col_packets; c++){
